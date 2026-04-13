@@ -21,17 +21,44 @@ const state = {
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded: Starting checkAuthStatus...');
+    
+    // Attach form submit listeners immediately
+    const loginFormElement = document.querySelector('form:has(#loginEmail)');
+    const registerFormElement = document.querySelector('form:has(#registerEmail)');
+    
+    if (loginFormElement) {
+        console.log('DOMContentLoaded: Attaching login form listener');
+        loginFormElement.addEventListener('submit', handleLogin);
+    } else {
+        console.warn('DOMContentLoaded: Login form not found');
+    }
+    
+    if (registerFormElement) {
+        console.log('DOMContentLoaded: Attaching register form listener');
+        registerFormElement.addEventListener('submit', handleRegister);
+    } else {
+        console.warn('DOMContentLoaded: Register form not found');
+    }
+    
     checkAuthStatus();
 });
 
 // ============ AUTHENTICATION ============
 async function checkAuthStatus() {
+    console.log('checkAuthStatus: Starting...');
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/current-user`);
+        console.log('checkAuthStatus: Fetching current-user from', `${API_BASE_URL}/auth/current-user`);
+        const response = await fetch(`${API_BASE_URL}/auth/current-user`, {
+            credentials: 'include'
+        });
+        console.log('checkAuthStatus: Response status:', response.status);
         const data = await response.json();
+        console.log('checkAuthStatus: Response data:', data);
         
         if (data.success) {
             // User is logged in
+            console.log('checkAuthStatus: User is logged in, showing main app');
             state.userId = data.user_id;
             state.userName = data.name;
             state.userEmail = data.email;
@@ -40,35 +67,89 @@ async function checkAuthStatus() {
             showMainApp();
         } else {
             // User is not logged in
+            console.log('checkAuthStatus: User is not logged in, showing auth forms');
             showAuthForms();
         }
     } catch (error) {
+        console.log('checkAuthStatus: Caught error:', error);
         showAuthForms();
     }
 }
 
 function showAuthForms() {
-    document.getElementById('authContainer').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
+    console.log('showAuthForms: Displaying auth forms');
+    const authContainer = document.getElementById('authContainer');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (authContainer) {
+        authContainer.style.display = 'flex';
+        authContainer.style.visibility = 'visible';
+    }
+    
+    if (mainApp) {
+        mainApp.style.display = 'none';
+        mainApp.style.visibility = 'hidden';
+    }
 }
 
 function showMainApp() {
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    setupEventListeners();
-    fetchAllergensList();
+    console.log('showMainApp: Hiding auth, showing main app');
+    const authContainer = document.getElementById('authContainer');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (!authContainer || !mainApp) {
+        console.error('showMainApp: Required elements not found!');
+        return;
+    }
+    
+    // Hide auth container
+    authContainer.style.display = 'none';
+    authContainer.style.visibility = 'hidden';
+    
+    // Show main app with multiple approaches to ensure visibility
+    mainApp.style.display = 'block';
+    mainApp.style.display = 'grid';
+    mainApp.style.visibility = 'visible';
+    
+    console.log('showMainApp: Main app display set, calling setupEventListeners after delay');
+    
+    // Use setTimeout to ensure DOM is updated before setting up listeners
+    setTimeout(() => {
+        try {
+            console.log('showMainApp: Calling setupEventListeners');
+            setupEventListeners();
+        } catch (error) {
+            console.error('showMainApp: Error in setupEventListeners:', error);
+        }
+        
+        try {
+            console.log('showMainApp: Calling fetchAllergensList');
+            fetchAllergensList();
+        } catch (error) {
+            console.error('showMainApp: Error in fetchAllergensList:', error);
+        }
+        
+        console.log('showMainApp: Completed successfully');
+    }, 100);
 }
 
 function toggleAuth() {
+    console.log('toggleAuth: Toggling between login and register forms');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     
     if (loginForm.classList.contains('hidden-form')) {
+        console.log('toggleAuth: Showing login form, hiding register form');
         loginForm.classList.remove('hidden-form');
+        loginForm.style.display = 'block';
         registerForm.classList.add('hidden-form');
+        registerForm.style.display = 'none';
     } else {
+        console.log('toggleAuth: Hiding login form, showing register form');
         loginForm.classList.add('hidden-form');
+        loginForm.style.display = 'none';
         registerForm.classList.remove('hidden-form');
+        registerForm.style.display = 'block';
     }
     
     // Clear error messages
@@ -79,28 +160,42 @@ function toggleAuth() {
 }
 
 async function handleLogin(e) {
-    e.preventDefault();
+    console.log('handleLogin: Form submitted');
+    console.log('handleLogin: Event object:', e);
+    
+    // Prevent default form submission
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     
+    console.log('handleLogin: Email =', email, ', Password length =', password.length);
+    
     if (!email || !password) {
+        console.log('handleLogin: Missing email or password');
         showErrorMessage('loginError', 'Please enter email and password');
-        return;
+        return false;
     }
     
     try {
+        console.log('handleLogin: Attempting to fetch /auth/login');
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({ email, password })
         });
         
         const data = await response.json();
+        console.log('handleLogin: Response received', data);
         
         if (data.success) {
+            console.log('handleLogin: Login successful, showing main app');
             state.userId = data.user_id;
             state.userName = data.name;
             state.userEmail = data.email;
@@ -108,35 +203,48 @@ async function handleLogin(e) {
             showMainApp();
             document.getElementById('loginForm').reset();
         } else {
+            console.log('handleLogin: Login failed with error:', data.error);
             showErrorMessage('loginError', data.error || 'Login failed');
         }
     } catch (error) {
+        console.log('handleLogin: Caught error:', error);
         showErrorMessage('loginError', error.message);
     }
+    
+    return false;
 }
 
 async function handleRegister(e) {
-    e.preventDefault();
+    console.log('handleRegister: Form submitted');
+    console.log('handleRegister: Event object:', e);
+    
+    // Prevent default form submission
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     
     const name = document.getElementById('registerName').value;
     const email = document.getElementById('registerEmail').value;
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('registerConfirmPassword').value;
     
+    console.log('handleRegister: Name =', name, ', Email =', email);
+    
     // Validation
     if (!name || !email || !password) {
         showErrorMessage('registerError', 'Please fill all fields');
-        return;
+        return false;
     }
     
     if (password.length < 6) {
         showErrorMessage('registerError', 'Password must be at least 6 characters');
-        return;
+        return false;
     }
     
     if (password !== confirmPassword) {
         showErrorMessage('registerError', 'Passwords do not match');
-        return;
+        return false;
     }
     
     try {
@@ -145,10 +253,12 @@ async function handleRegister(e) {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({ name, email, password })
         });
         
         const data = await response.json();
+        console.log('handleRegister: Response received', data);
         
         if (data.success) {
             state.userId = data.user_id;
@@ -159,14 +269,18 @@ async function handleRegister(e) {
             showErrorMessage('registerError', data.error || 'Registration failed');
         }
     } catch (error) {
+        console.log('handleRegister: Caught error:', error);
         showErrorMessage('registerError', error.message);
     }
+    
+    return false;
 }
 
 async function handleLogout() {
     try {
         await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST'
+            method: 'POST',
+            credentials: 'include'
         });
         state.userId = null;
         state.userName = null;
@@ -186,27 +300,36 @@ function showErrorMessage(elementId, message) {
 
 // ============ EVENT LISTENERS ============
 function setupEventListeners() {
-    // Drag and Drop
-    const dragDropZone = document.getElementById('dragDropZone');
-    dragDropZone.addEventListener('click', () => document.getElementById('imageInput').click());
-    dragDropZone.addEventListener('dragover', handleDragOver);
-    dragDropZone.addEventListener('drop', handleDrop);
+    try {
+        // Drag and Drop
+        const dragDropZone = document.getElementById('dragDropZone');
+        if (dragDropZone) {
+            dragDropZone.addEventListener('click', () => document.getElementById('imageInput').click());
+            dragDropZone.addEventListener('dragover', handleDragOver);
+            dragDropZone.addEventListener('drop', handleDrop);
+        }
 
-    document.getElementById('imageInput').addEventListener('change', handleImageSelect);
+        const imageInput = document.getElementById('imageInput');
+        if (imageInput) {
+            imageInput.addEventListener('change', handleImageSelect);
+        }
 
-    // Navigation
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', handleNavClick);
-    });
+        // Navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', handleNavClick);
+        });
 
-    // Hamburger menu
-    const hamburger = document.querySelector('.hamburger');
-    if (hamburger) {
-        hamburger.addEventListener('click', toggleMobileMenu);
+        // Hamburger menu
+        const hamburger = document.querySelector('.hamburger');
+        if (hamburger) {
+            hamburger.addEventListener('click', toggleMobileMenu);
+        }
+
+        // Load food categories dropdown
+        loadFoodCategories();
+    } catch (error) {
+        console.error('setupEventListeners: Error setting up listeners:', error);
     }
-
-    // Load food categories dropdown
-    loadFoodCategories();
 }
 
 // ============ FOOD CATEGORIES ============
@@ -277,19 +400,28 @@ function handleImageFile(file) {
 }
 
 function showPreview(imageSrc) {
-    document.getElementById('dragDropZone').classList.add('hidden');
+    const dragDropZone = document.getElementById('dragDropZone');
     const previewContainer = document.getElementById('previewContainer');
-    previewContainer.classList.remove('hidden');
-    document.getElementById('previewImage').src = imageSrc;
-    document.getElementById('extractedText').innerHTML = '<p class="placeholder">Image will be scanned...</p>';
+    const previewImage = document.getElementById('previewImage');
+    const extractedText = document.getElementById('extractedText');
+    
+    if (dragDropZone) dragDropZone.classList.add('hidden');
+    if (previewContainer) previewContainer.classList.remove('hidden');
+    if (previewImage) previewImage.src = imageSrc;
+    if (extractedText) extractedText.innerHTML = '<p class="placeholder">Image will be scanned...</p>';
 }
 
 function clearImage() {
     state.currentImage = null;
-    document.getElementById('previewContainer').classList.add('hidden');
-    document.getElementById('dragDropZone').classList.remove('hidden');
-    document.getElementById('imageInput').value = '';
-    document.getElementById('extractedText').innerHTML = '<p class="placeholder">Image will appear here after scanning</p>';
+    const previewContainer = document.getElementById('previewContainer');
+    const dragDropZone = document.getElementById('dragDropZone');
+    const imageInput = document.getElementById('imageInput');
+    const extractedText = document.getElementById('extractedText');
+    
+    if (previewContainer) previewContainer.classList.add('hidden');
+    if (dragDropZone) dragDropZone.classList.remove('hidden');
+    if (imageInput) imageInput.value = '';
+    if (extractedText) extractedText.innerHTML = '<p class="placeholder">Image will appear here after scanning</p>';
 }
 
 // ============ SCANNER TABS & CAMERA ============
@@ -317,6 +449,8 @@ function switchScannerTab(tabName) {
         if (tabName === 'upload' && btn.textContent.includes('Upload')) {
             btn.classList.add('active');
         } else if (tabName === 'camera' && btn.textContent.includes('Camera')) {
+            btn.classList.add('active');
+        } else if (tabName === 'text' && btn.textContent.includes('Text')) {
             btn.classList.add('active');
         }
     });
@@ -464,11 +598,16 @@ async function startCamera() {
         cameraActive = true;
         console.log('✓✓✓ CAMERA FULLY ACTIVE AND READY ✓✓✓');
 
-        // Update UI
-        document.getElementById('startCameraBtn').classList.add('hidden');
-        document.getElementById('captureCameraBtn').classList.remove('hidden');
-        document.getElementById('stopCameraBtn').classList.remove('hidden');
-        document.getElementById('cameraError').classList.add('hidden');
+        // Update UI - with null checks
+        const startBtn = document.getElementById('startCameraBtn');
+        const captureBtn = document.getElementById('captureCameraBtn');
+        const stopBtn = document.getElementById('stopCameraBtn');
+        const cameraError = document.getElementById('cameraError');
+        
+        if (startBtn) startBtn.classList.add('hidden');
+        if (captureBtn) captureBtn.classList.remove('hidden');
+        if (stopBtn) stopBtn.classList.remove('hidden');
+        if (cameraError) cameraError.classList.add('hidden');
 
         showToast('✓ Camera started successfully!', 'success');
         console.log('=== CAMERA START COMPLETE ===\n');
@@ -478,6 +617,13 @@ async function startCamera() {
         console.error('Full error:', error);
         
         const errorMsg = document.getElementById('cameraErrorMsg');
+        const cameraError = document.getElementById('cameraError');
+        
+        if (!errorMsg || !cameraError) {
+            console.error('Camera error UI elements not found!');
+            showToast('❌ Camera error: ' + error.message, 'error');
+            return;
+        }
         
         // Specific error messages
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -495,10 +641,15 @@ async function startCamera() {
         }
 
         // Show error UI
-        document.getElementById('cameraError').classList.remove('hidden');
-        document.getElementById('startCameraBtn').classList.remove('hidden');
-        document.getElementById('captureCameraBtn').classList.add('hidden');
-        document.getElementById('stopCameraBtn').classList.add('hidden');
+        cameraError.classList.remove('hidden');
+        const startBtn = document.getElementById('startCameraBtn');
+        const captureBtn = document.getElementById('captureCameraBtn');
+        const stopBtn = document.getElementById('stopCameraBtn');
+        
+        if (startBtn) startBtn.classList.remove('hidden');
+        if (captureBtn) captureBtn.classList.add('hidden');
+        if (stopBtn) stopBtn.classList.add('hidden');
+        
         showToast('❌ Camera error: ' + error.message, 'error');
         console.log('=== CAMERA START FAILED ===\n');
     }
@@ -511,12 +662,16 @@ function stopCamera() {
         cameraActive = false;
 
         const videoElement = document.getElementById('videoStream');
-        videoElement.srcObject = null;
+        if (videoElement) videoElement.srcObject = null;
 
         // Update button states
-        document.getElementById('startCameraBtn').classList.remove('hidden');
-        document.getElementById('captureCameraBtn').classList.add('hidden');
-        document.getElementById('stopCameraBtn').classList.add('hidden');
+        const startBtn = document.getElementById('startCameraBtn');
+        const captureBtn = document.getElementById('captureCameraBtn');
+        const stopBtn = document.getElementById('stopCameraBtn');
+        
+        if (startBtn) startBtn.classList.remove('hidden');
+        if (captureBtn) captureBtn.classList.add('hidden');
+        if (stopBtn) stopBtn.classList.add('hidden');
     }
 }
 
@@ -528,7 +683,8 @@ async function captureFromCamera() {
 
     try {
         console.log('=== CAPTURE IMAGE INITIATED ===');
-        document.getElementById('cameraCaptureLoading').classList.remove('hidden');
+        const cameraCaptureLoading = document.getElementById('cameraCaptureLoading');
+        if (cameraCaptureLoading) cameraCaptureLoading.classList.remove('hidden');
 
         const videoElement = document.getElementById('videoStream');
         if (!videoElement) {
@@ -592,13 +748,15 @@ async function captureFromCamera() {
         switchTabToUpload();
         showPreview(imageDataUrl);
 
-        document.getElementById('cameraCaptureLoading').classList.add('hidden');
+        const cameraCaptureLoading2 = document.getElementById('cameraCaptureLoading');
+        if (cameraCaptureLoading2) cameraCaptureLoading2.classList.add('hidden');
         showToast('✓ Image captured successfully!', 'success');
         console.log('=== CAPTURE COMPLETE ===');
         
     } catch (error) {
         console.error('❌ CAPTURE ERROR:', error);
-        document.getElementById('cameraCaptureLoading').classList.add('hidden');
+        const cameraCaptureLoading3 = document.getElementById('cameraCaptureLoading');
+        if (cameraCaptureLoading3) cameraCaptureLoading3.classList.add('hidden');
         showToast('Error capturing image: ' + error.message, 'error');
     }
 }
@@ -633,24 +791,52 @@ async function scanImage() {
     showLoading(true);
 
     try {
+        // Get selected food category
+        const foodCategoryEl = document.getElementById('foodCategory');
+        const foodCategory = (foodCategoryEl && foodCategoryEl.value) ? foodCategoryEl.value : '';
+        
+        // Use raw OCR mode (no preprocessing)
+        const usePreprocessing = false;
+
+        // Unified endpoint - send image with user allergens and food category
         const response = await fetch(`${API_BASE_URL}/scan`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ image: state.currentImage })
+            credentials: 'include',
+            body: JSON.stringify({ 
+                image: state.currentImage,
+                userAllergens: state.userProfile.allergens || [],
+                userId: state.userId,
+                foodCategory: foodCategory,
+                usePreprocessing: usePreprocessing
+            })
         });
 
         const data = await response.json();
 
         if (data.success) {
-            state.extractedText = data.extracted_text.split('\n').filter(t => t.trim());
+            // Extract ingredients from unified response - with safety checks
+            state.extractedText = data.extracted_ingredients || [];
+            state.analysisResults = data;
+            
+            // Safety checks for data structure
+            if (!Array.isArray(state.extractedText)) {
+                state.extractedText = [];
+            }
+            
             displayExtractedText(state.extractedText);
-            showToast('Image scanned successfully!', 'success');
+            displayResults(data);
+            showResults();
+            
+            // Confirm raw OCR mode
+            showToast('Image scanned in RAW OCR mode - successfully analyzed!', 'success');
         } else {
-            showToast('Error: ' + data.error, 'error');
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
+        console.error('Scan error:', error);
         showToast('Failed to scan image: ' + error.message, 'error');
     } finally {
         showLoading(false);
@@ -664,28 +850,56 @@ function displayExtractedText(ingredients) {
         return;
     }
 
-    let html = '';
+    // Create wrapper for flex display
+    let html = '<div class="ingredients-flex-container">';
+    
     ingredients.forEach((ingredient, index) => {
+        // Clean up ingredient name
+        const cleanedIngredient = ingredient.trim().toLowerCase().replace(/^\s+|\s+$/g, '');
+        
         html += `
-            <div class="ingredient-item">
-                <span>${ingredient}</span>
-                <button class="remove-btn" onclick="removeIngredient(${index})" title="Remove">
+            <div class="ingredient-badge">
+                <span class="badge-text" title="${cleanedIngredient}">${cleanedIngredient}</span>
+                <button class="badge-remove-btn" onclick="removeIngredient(${index})" title="Remove this ingredient">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         `;
     });
+    
+    html += '</div>';
+    html += `<div class="ingredients-count"><small>${ingredients.length} ingredient${ingredients.length !== 1 ? 's' : ''} detected</small></div>`;
     container.innerHTML = html;
-
-    // Auto-analyze
-    analyzeIngredients();
 }
 
 function removeIngredient(index) {
-    state.extractedText.splice(index, 1);
-    displayExtractedText(state.extractedText);
-    if (state.extractedText.length > 0) {
-        analyzeIngredients();
+    try {
+        if (!state.extractedText || index < 0 || index >= state.extractedText.length) {
+            console.warn('Invalid ingredient index:', index);
+            return;
+        }
+        
+        const removedIngredient = state.extractedText.splice(index, 1)[0];
+        console.log('Removed ingredient:', removedIngredient);
+        
+        // Update display
+        if (typeof displayExtractedText === 'function') {
+            displayExtractedText(state.extractedText);
+        }
+        
+        // Re-analyze if ingredients remain and results exist
+        if (state.extractedText.length > 0 && state.analysisResults) {
+            analyzeIngredients();
+        } else if (state.extractedText.length === 0 && state.analysisResults) {
+            // Clear results if no ingredients left
+            state.analysisResults = null;
+            displayResults(null);
+        }
+        
+        showToast('Ingredient removed', 'success');
+    } catch (error) {
+        console.error('Error removing ingredient:', error);
+        showToast('Error removing ingredient', 'error');
     }
 }
 
@@ -707,6 +921,7 @@ async function analyzeIngredients() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 ingredients: ingredients,
                 userAllergens: state.userProfile.allergens,
@@ -743,106 +958,197 @@ function analyzeManualIngredients() {
         .filter(i => i.length > 0);
 
     displayExtractedText(state.extractedText);
+    // Now analyze the manually entered ingredients
+    analyzeIngredients();
 }
 
 function displayResults(data) {
-    // Update statistics - FOCUS ON ALLERGENS ONLY
-    document.getElementById('totalIngredients').textContent = data.total_ingredients;
-    document.getElementById('warningCount').textContent = data.warnings.length;
+    // Safety checks - ensure all data fields exist before using them
+    if (!data) {
+        showToast('No data received from analysis', 'error');
+        return;
+    }
+
+    // Provide defaults for all fields that might be undefined
+    const totalIngredients = data.total_ingredients || 0;
+    const warnings = data.warnings || [];
+    const safeIngredients = data.safe_ingredients || [];
+    const healthScore = data.health_score || 100;
+    const safetyStatus = data.safety_status || 'safe';
+    const allergenCount = data.allergen_count || 0;
     
-    // Update safe count to show only actual validated ingredients
-    const actualSafeCount = Math.max(0, data.total_ingredients - data.warnings.length);
-    document.getElementById('safeCount').textContent = actualSafeCount;
+    // Update statistics
+    document.getElementById('totalIngredients').textContent = totalIngredients;
+    document.getElementById('warningCount').textContent = warnings.length;
+    document.getElementById('safeCount').textContent = safeIngredients.length;
 
     // Update health score
-    const scoreValue = data.health_score;
+    const scoreValue = healthScore;
     const scoreCircle = document.getElementById('scoreCircle');
     const scoreLabel = document.getElementById('scoreLabel');
     const scoreValueEl = document.getElementById('scoreValue');
-
+    
     scoreValueEl.textContent = scoreValue;
-    scoreCircle.classList.remove('warning', 'danger');
+    scoreCircle.classList.remove('safe', 'medium', 'unsafe');
+    scoreCircle.classList.add(safetyStatus);
 
-    if (scoreValue < 40) {
-        scoreCircle.classList.add('danger');
-        scoreLabel.textContent = 'Poor - Many allergens detected';
-    } else if (scoreValue < 70) {
-        scoreCircle.classList.add('warning');
-        scoreLabel.textContent = 'Fair - Some allergens detected';
+    // Set status text
+    let statusIcon = '';
+    let statusColor = '';
+    let statusText = '';
+    
+    if (safetyStatus === 'unsafe') {
+        statusIcon = '🚨';
+        statusColor = '#EF4444';
+        statusText = `UNSAFE - ${allergenCount} allergens detected`;
+    } else if (safetyStatus === 'medium') {
+        statusIcon = '⚠️';
+        statusColor = '#F59E0B';
+        statusText = `MEDIUM RISK - ${allergenCount} allergen detected`;
     } else {
-        scoreLabel.textContent = 'Good - Safe to consume (No allergens detected)';
+        statusIcon = '✓';
+        statusColor = '#10B981';
+        statusText = `SAFE - No allergens, ${safeIngredients.length} safe ingredient(s)`;
+    }
+    
+    scoreLabel.innerHTML = `<span style="color: ${statusColor}; font-weight: bold; font-size: 16px;">${statusIcon} ${statusText}</span>`;
+
+    // Display recommendations section  
+    const recommendations = data.recommendations || [];
+    if (recommendations && recommendations.length > 0) {
+        let recommendationsHTML = `
+            <div class="recommendations-container" id="recommendationsContainer">
+                <h3 style="margin-bottom: 20px; color: #10B981; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-star"></i> Healthier Alternatives
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        `;
+
+        recommendations.forEach(product => {
+            recommendationsHTML += `
+                <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; background: #fafafa;">
+                    <h4 style="margin: 0 0 5px 0; color: #333;">${product.name || 'Product'}</h4>
+                    <p style="margin: 3px 0; font-size: 14px; color: #666;"><strong>Brand:</strong> ${product.brand || 'N/A'}</p>
+                    <p style="margin: 8px 0; font-size: 14px;"><i class="fas fa-heart" style="color: #ef4444;"></i> <strong>Score:</strong> ${product.health_score || 0}/100</p>
+                </div>
+            `;
+        });
+
+        recommendationsHTML += `</div></div>`;
+        
+        const resultsSection = document.getElementById('results');
+        let recommendationsDiv = document.getElementById('recommendationsContainer');
+        if (recommendationsDiv) {
+            recommendationsDiv.outerHTML = recommendationsHTML;
+        } else if (resultsSection) {
+            const newDiv = document.createElement('div');
+            newDiv.innerHTML = recommendationsHTML;
+            resultsSection.appendChild(newDiv.firstElementChild);
+        }
     }
 
-    // Display warnings
+    // Display warnings with severity indicator and deduplication
     const warningsContainer = document.getElementById('warningsContainer');
     const warningsList = document.getElementById('warningsList');
 
-    if (data.warnings.length > 0) {
+    if (warningsContainer && warningsList && data.warnings.length > 0) {
         warningsContainer.classList.remove('hidden');
-        let warningsHTML = '';
+        
+        // Deduplicate warnings by ingredient (keep first occurrence)
+        const uniqueWarnings = [];
+        const seenIngredients = new Set();
+        
         data.warnings.forEach(warning => {
+            const ingredientLower = warning.ingredient.toLowerCase();
+            if (!seenIngredients.has(ingredientLower)) {
+                uniqueWarnings.push(warning);
+                seenIngredients.add(ingredientLower);
+            }
+        });
+        
+        // Create safety badge based on allergen count
+        let badgeColor = safetyStatus === 'unsafe' ? '#EF4444' : '#F59E0B';
+        let badgeIcon = safetyStatus === 'unsafe' ? '🚨' : '⚠️';
+        let badgeText = safetyStatus === 'unsafe' 
+            ? `UNSAFE - Product contains ${uniqueWarnings.length} allergen(s)` 
+            : `MEDIUM RISK - Product contains ${uniqueWarnings.length} allergen(s)`;
+        
+        let warningsHTML = `<div class="allergen-count-badge" style="background: ${badgeColor}; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; font-size: 16px;">
+            ${badgeIcon} ${badgeText}
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px;">`;
+        
+        uniqueWarnings.forEach(warning => {
             warningsHTML += `
-                <div class="warning-item">
-                    <h4>${warning.ingredient}</h4>
-                    <span class="warning-severity ${warning.severity}">${warning.severity.toUpperCase()}</span>
-                    <p><strong>Allergen:</strong> ${warning.allergen}</p>
-                    <p>${warning.description}</p>
+                <div style="display: flex; align-items: flex-start; padding: 12px 15px; background: white; border-left: 5px solid ${badgeColor}; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <span style="color: ${badgeColor}; font-size: 18px; margin-right: 10px; flex-shrink: 0;">⚠️</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #333; margin-bottom: 4px;">${warning.ingredient}</div>
+                        <div style="font-size: 13px; color: #666;">
+                            <strong>Allergen:</strong> ${warning.allergen} 
+                            <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; margin-left: 8px;">${warning.severity.toUpperCase()}</span>
+                        </div>
+                    </div>
                 </div>
             `;
         });
+        warningsHTML += `</div>`;
         warningsList.innerHTML = warningsHTML;
-    } else {
+    } else if (warningsContainer) {
         warningsContainer.classList.add('hidden');
     }
 
-    // Display safe ingredients (only for reference - focus is on allergens)
+    // Display safe ingredients (only unique ones for clarity)
     const safeContainer = document.getElementById('safeContainer');
     const safeList = document.getElementById('safeIngredientsList');
 
-    // Calculate safe ingredients more accurately
-    const allergenIngredients = new Set(data.warnings.map(w => w.ingredient.toLowerCase()));
-    const validSafeIngredients = state.extractedText.filter(ing => 
-        !allergenIngredients.has(ing.toLowerCase()) && ing.trim().length > 2
-    );
+    // Get unique safe ingredients from server response or calculate locally
+    const uniqueSafeIngredients = data.safe_ingredients && data.safe_ingredients.length > 0 
+        ? data.safe_ingredients 
+        : (() => {
+            const allergenIngredients = new Set(data.warnings.map(w => w.ingredient.toLowerCase()));
+            return state.extractedText.filter(ing => 
+                !allergenIngredients.has(ing.toLowerCase()) && ing.trim().length > 2
+            );
+        })();
 
-    if (validSafeIngredients.length > 0) {
+    if (safeContainer && safeList && uniqueSafeIngredients.length > 0) {
         safeContainer.classList.remove('hidden');
-        let safeHTML = '';
-        const displayCount = Math.min(validSafeIngredients.length, 8); // Limit display
-        validSafeIngredients.slice(0, displayCount).forEach(ingredient => {
-            safeHTML += `<div class="ingredient-tag">${ingredient}</div>`;
-        });
-        if (validSafeIngredients.length > 8) {
-            safeHTML += `<div class="ingredient-tag" style="color: #666;">+${validSafeIngredients.length - 8} more</div>`;
+        
+        // Split ingredients into chunks for better readability
+        const itemsPerRow = 3;
+        const chunks = [];
+        for (let i = 0; i < uniqueSafeIngredients.length; i += itemsPerRow) {
+            chunks.push(uniqueSafeIngredients.slice(i, i + itemsPerRow));
         }
-        safeList.innerHTML = safeHTML;
-    } else {
-        safeContainer.classList.add('hidden');
-    }
-
-    // Display alternatives
-    const alternativesContainer = document.getElementById('alternativesContainer');
-    const alternativesList = document.getElementById('alternativesList');
-
-    if (data.alternatives.length > 0) {
-        alternativesContainer.classList.remove('hidden');
-        let alternativesHTML = '';
-        data.alternatives.forEach(alt => {
-            let optionsHTML = '';
-            alt.alternatives.forEach(option => {
-                optionsHTML += `<span class="alternative-tag">${option}</span>`;
+        let safeHTML = `<div style="background: #D1FAE5; border: 2px solid #6EE7B7; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+            <h4 style="color: #065F46; margin: 0 0 15px 0;">✓ Safe Ingredients (${uniqueSafeIngredients.length} total)</h4>`;
+        
+        // Add a grid layout for safe ingredients
+        if (uniqueSafeIngredients.length > 10) {
+            safeHTML += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">`;
+            uniqueSafeIngredients.forEach(ingredient => {
+                safeHTML += `<div style="display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: white; border-left: 3px solid #10B981; border-radius: 4px;">
+                    <i class="fas fa-check-circle" style="color: #10B981; font-size: 14px; flex-shrink: 0;"></i>
+                    <span style="color: #065F46; font-weight: 500; font-size: 14px;">${ingredient}</span>
+                </div>`;
             });
-            alternativesHTML += `
-                <div class="alternative-item">
-                    <h4>Instead of: ${alt.allergen}</h4>
-                    <p>${alt.reason}</p>
-                    <div class="alternative-options">${optionsHTML}</div>
-                </div>
-            `;
-        });
-        alternativesList.innerHTML = alternativesHTML;
-    } else {
-        alternativesContainer.classList.add('hidden');
+            safeHTML += `</div>`;
+        } else {
+            safeHTML += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+            uniqueSafeIngredients.forEach(ingredient => {
+                safeHTML += `<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: white; border-left: 5px solid #10B981; border-radius: 4px;">
+                    <span style="flex: 1; color: #065F46; font-weight: 500; font-size: 15px;">${ingredient}</span>
+                    <i class="fas fa-check-circle" style="color: #10B981; font-size: 16px;"></i>
+                </div>`;
+            });
+            safeHTML += `</div>`;
+        }
+        
+        safeHTML += `</div>`;
+        safeList.innerHTML = safeHTML;
+    } else if (safeContainer) {
+        safeContainer.classList.add('hidden');
     }
 
     // Display category-based recommendations
@@ -850,35 +1156,65 @@ function displayResults(data) {
         let recommendationsHTML = `
             <div class="recommendations-container" id="recommendationsContainer">
                 <h3 style="margin-bottom: 20px; color: #10B981; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-star"></i> Healthier Alternatives in "${data.food_category || 'This Category'}"
+                    <i class="fas fa-star"></i> Better Alternatives in "${data.food_category || 'Similar Category'}"
                 </h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">These alternatives are free from your allergens and may have better nutritional profiles.</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
         `;
 
         data.recommendations.forEach(product => {
+            // Determine improvement styling
+            const healthImprovement = product.improvement_value !== undefined ? product.improvement_value : 0;
+            const improvementColor = healthImprovement > 0 ? '#10B981' : healthImprovement < 0 ? '#EF4444' : '#666';
+            const improvementIcon = healthImprovement > 0 ? '↑' : healthImprovement < 0 ? '↓' : '→';
+            
+            // Allergen free info
             const allergenFreeInfo = product.allergen_free && product.allergen_free.length > 0 
-                ? `<p style="margin: 8px 0; color: #10B981;"><i class="fas fa-check-circle"></i> <strong>Allergen Free:</strong> ${product.allergen_free.join(', ')}</p>`
+                ? `<p style="margin: 8px 0; padding: 8px 12px; background: #D1FAE5; border-left: 4px solid #10B981; color: #065F46; border-radius: 4px; font-size: 13px;"><i class="fas fa-check-circle"></i> Free from: ${product.allergen_free.join(', ')}</p>`
                 : '';
 
+            // Reason/comparison
+            const reasonText = product.reason || `${healthImprovement > 0 ? 'Higher' : 'Similar'} quality alternative in category`;
+
             recommendationsHTML += `
-                <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; background: #fafafa; transition: all 0.3s ease;">
-                    <h4 style="margin: 0 0 5px 0; color: #333;">${product.name}</h4>
-                    <p style="margin: 3px 0; font-size: 14px; color: #666;"><strong>Brand:</strong> ${product.brand}</p>
-                    <p style="margin: 3px 0; font-size: 14px; color: #666;"><strong>Category:</strong> ${product.category || 'N/A'}</p>
+                <div style="border: 2px solid #10B981; border-radius: 10px; padding: 18px; background: #f0fdf4; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <h4 style="margin: 0 0 4px 0; color: #065F46; font-size: 16px;">${product.name}</h4>
+                            <p style="margin: 0; font-size: 13px; color: #059669;"><strong>${product.brand}</strong></p>
+                        </div>
+                        <span style="background: ${improvementColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                            ${improvementIcon} ${product.improvement || 'Similar'}
+                        </span>
+                    </div>
+                    
+                    <p style="margin: 8px 0; font-size: 13px; color: #666; padding: 8px; background: white; border-left: 3px solid #fbbf24; border-radius: 3px;">
+                        <i class="fas fa-lightbulb"></i> ${reasonText}
+                    </p>
+                    
                     ${allergenFreeInfo}
-                    <p style="margin: 8px 0; font-size: 14px;">
-                        <i class="fas fa-heart" style="color: #ef4444;"></i> <strong>Health Score:</strong> ${product.health_score}/100
-                    </p>
-                    <p style="margin: 8px 0; font-size: 14px;">
-                        <i class="fas fa-star" style="color: #fbbf24;"></i> <strong>Rating:</strong> ${product.rating}/5.0
-                    </p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0;">
+                        <div style="background: white; padding: 8px; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 2px;">Your Score</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #EF4444;">${data.health_score || 'N/A'}</div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 2px;">Alternative</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #10B981;">${product.health_score || 'N/A'}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <p style="margin: 0; font-size: 13px; text-align: center;">
+                            <i class="fas fa-star" style="color: #fbbf24;"></i> ${product.rating || 'N/A'}/5.0
+                        </p>
+                        <p style="margin: 0; font-size: 13px; text-align: center;">
+                            ${product.is_organic ? '<i class="fas fa-leaf" style="color: #10B981;"></i> Organic' : '<i class="fas fa-check" style="color: #666;"></i> Verified'}
+                        </p>
+                    </div>
+                </div>
             `;
-
-            if (product.is_organic) {
-                recommendationsHTML += `<p style="margin: 8px 0; color: #10B981;"><i class="fas fa-leaf"></i> <strong>Organic Product</strong></p>`;
-            }
-
-            recommendationsHTML += `</div>`;
         });
 
         recommendationsHTML += `</div></div>`;
@@ -903,30 +1239,80 @@ function displayResults(data) {
     }
 
     // Create visualizations - ALLERGEN FOCUSED
-    const allergenCount = data.warnings ? data.warnings.length : 0;
+    const warningsCount = data.warnings ? data.warnings.length : 0;
     const highRisk = data.warnings ? data.warnings.filter(w => w.severity === 'high').length : 0;
-    const mediumLowRisk = allergenCount - highRisk;
+    const mediumLowRisk = warningsCount - highRisk;
+    
+    // Display all extracted ingredients (each individually in list format)
+    const allIngredientsContainer = document.getElementById('allIngredientsContainer');
+    const allIngredientsList = document.getElementById('allIngredientsList');
+    
+    if (allIngredientsContainer && allIngredientsList && state.extractedText && state.extractedText.length > 0) {
+        allIngredientsContainer.classList.remove('hidden');
+        
+        // Create a map of warning ingredients for quick lookup
+        const warningIngredientsSet = new Set(
+            (data.warnings || []).map(w => w.ingredient.toLowerCase())
+        );
+        
+        // Separate warning and safe ingredients
+        const warningItems = [];
+        const safeItems = [];
+        
+        state.extractedText.forEach((ingredient, index) => {
+            const isWarning = warningIngredientsSet.has(ingredient.toLowerCase());
+            if (isWarning) {
+                warningItems.push({ ingredient, index });
+            } else {
+                safeItems.push({ ingredient, index });
+            }
+        });
+        
+        // Display warnings first, then safe ingredients
+        let ingredientsHTML = '';
+        
+        // Warning ingredients section
+        if (warningItems.length > 0) {
+            ingredientsHTML += `<div style="margin-bottom: 15px;">
+                <h5 style="color: #DC2626; margin: 10px 0; font-size: 14px;"><i class="fas fa-exclamation"></i> Ingredients with Allergens (${warningItems.length})</h5>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">`;
+            
+            warningItems.forEach(item => {
+                ingredientsHTML += `<div style="border-left: 5px solid #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #7F1D1D; font-size: 14px;">${item.ingredient}</span>
+                    <button onclick="removeIngredient(${item.index})" style="background: none; border: none; color: #DC2626; cursor: pointer; font-size: 16px; padding: 0; display: flex; align-items: center;">✕</button>
+                </div>`;
+            });
+            
+            ingredientsHTML += `</div></div>`;
+        }
+        
+        // Safe ingredients section
+        if (safeItems.length > 0) {
+            ingredientsHTML += `<div>
+                <h5 style="color: #10B981; margin: 10px 0; font-size: 14px;"><i class="fas fa-check"></i> Safe Ingredients (${safeItems.length})</h5>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">`;
+            
+            safeItems.forEach(item => {
+                ingredientsHTML += `<div style="border-left: 5px solid #10B981; padding: 8px 12px; background: #F0FDF4; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #166534; font-size: 14px;">${item.ingredient}</span>
+                    <button onclick="removeIngredient(${item.index})" style="background: none; border: none; color: #10B981; cursor: pointer; font-size: 16px; padding: 0; display: flex; align-items: center;">✕</button>
+                </div>`;
+            });
+            
+            ingredientsHTML += `</div></div>`;
+        }
+        
+        allIngredientsList.innerHTML = ingredientsHTML;
+    } else if (allIngredientsContainer) {
+        allIngredientsContainer.classList.add('hidden');
+    }
     
     createAllergenSummaryChart(allergenCount, highRisk, mediumLowRisk);
     
     if (data.warnings && data.warnings.length > 0) {
         createAllergenChart(data.warnings);
     }
-    
-    // Get health scores from recommendations
-    const recommendedScores = data.recommendations && data.recommendations.length > 0
-        ? data.recommendations.map(r => r.health_score || 0)
-        : [];
-    
-    createHealthScoreChart(data.health_score, recommendedScores);
-    
-    // Create allergen severity breakdown chart
-    const insights = data.insights || {
-        allergen_count: allergenCount,
-        high_risk: highRisk,
-        medium_low_risk: mediumLowRisk
-    };
-    createRiskChart(insights);
 }
 
 function showResults() {
@@ -959,6 +1345,10 @@ async function fetchAllergensList() {
 
 function renderAllergenSelector() {
     const selector = document.getElementById('allergenSelector');
+    if (!selector) {
+        console.warn('renderAllergenSelector: allergenSelector element not found');
+        return;
+    }
     let html = '';
     availableAllergens.forEach(allergen => {
         const isSelected = state.userProfile.allergens.includes(allergen);
@@ -1019,6 +1409,7 @@ async function saveProfile() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 allergens: state.userProfile.allergens,
                 dietary_preferences: state.userProfile.dietary
@@ -1093,8 +1484,24 @@ function saveResults() {
 function handleNavClick(e) {
     const href = e.currentTarget.getAttribute('href');
     if (href && href.startsWith('#')) {
+        e.preventDefault();
+        
+        // Close profile section if open
+        const profileSection = document.getElementById('profile');
+        if (profileSection && !profileSection.classList.contains('hidden')) {
+            hideProfileSection();
+        }
+        
+        // Update active link
         document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
         e.currentTarget.classList.add('active');
+        
+        // Scroll to target
+        const targetId = href.substring(1);
+        const targetElement = document.getElementById(targetId);
+        if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 }
 
@@ -1148,7 +1555,9 @@ document.addEventListener('keydown', (e) => {
 // ============ USER STATISTICS & SCAN HISTORY ============
 async function loadUserStatistics() {
     try {
-        const response = await fetch(`${API_BASE_URL}/insights/${state.userId}`);
+        const response = await fetch(`${API_BASE_URL}/insights/${state.userId}`, {
+            credentials: 'include'
+        });
         const data = await response.json();
 
         if (data.success) {
@@ -1163,7 +1572,9 @@ async function loadUserStatistics() {
 
 async function loadScanHistory() {
     try {
-        const response = await fetch(`${API_BASE_URL}/insights/${state.userId}`);
+        const response = await fetch(`${API_BASE_URL}/insights/${state.userId}`, {
+            credentials: 'include'
+        });
         const data = await response.json();
 
         if (data.success && data.scan_history && data.scan_history.length > 0) {
@@ -1285,92 +1696,496 @@ function createAllergenChart(warnings) {
     });
 }
 
-function createHealthScoreChart(currentScore, recommendedScores) {
-    const ctx = document.getElementById('healthScoreChart');
-    if (!ctx) return;
-
-    if (window.healthScoreChartInstance) {
-        window.healthScoreChartInstance.destroy();
+// ============ PROFILE SECTION FUNCTIONS ============
+function toggleEditMode(type) {
+    if (type === 'allergens') {
+        toggleEditAllergens();
+    } else if (type === 'preferences') {
+        toggleEditPreferences();
     }
-
-    // Calculate average of recommended scores
-    const avgRecommendedScore = recommendedScores.length > 0 
-        ? (recommendedScores.reduce((a, b) => a + b, 0) / recommendedScores.length)
-        : 0;
-
-    window.healthScoreChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Your Score', 'Avg Recommended'],
-            datasets: [{
-                label: 'Health Score',
-                data: [currentScore, Math.round(avgRecommendedScore * 10) / 10],
-                backgroundColor: ['#EF4444', '#10B981'],
-                borderColor: ['#EF4444', '#10B981'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
 }
 
-function createRiskChart(insights) {
-    const ctx = document.getElementById('riskChart');
-    if (!ctx) return;
+function showProfileSection() {
+    // Hide all main sections
+    const mainSections = document.querySelectorAll('.hero, .scanner-section, .results-section, .about, #facts');
+    mainSections.forEach(section => section.classList.add('hidden'));
+    
+    // Show profile section
+    const profileSection = document.getElementById('profile');
+    if (profileSection) {
+        profileSection.classList.remove('hidden');
+        profileSection.classList.add('active');
+        loadProfileData();
+        populateAllergenInfoGuide();
+    }
+    
+    // Remove active state from nav links
+    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-    if (window.riskChartInstance) {
-        window.riskChartInstance.destroy();
+function hideProfileSection() {
+    // Hide profile section
+    const profileSection = document.getElementById('profile');
+    if (profileSection) {
+        profileSection.classList.add('hidden');
+        profileSection.classList.remove('active');
+    }
+    
+    // Show main sections
+    const mainSections = document.querySelectorAll('.hero, .scanner-section, .results-section, .about, #facts');
+    mainSections.forEach(section => section.classList.remove('hidden'));
+    
+    // Set home section as active
+    const homeLink = document.querySelector('a[href="#home"]');
+    if (homeLink) {
+        homeLink.classList.add('active');
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function loadProfileData() {
+    try {
+        // Display user info
+        const nameElement = document.getElementById('profileName');
+        const emailElement = document.getElementById('profileEmail');
+        if (nameElement) nameElement.textContent = state.userName || 'User';
+        if (emailElement) emailElement.textContent = state.userEmail || 'No email';
+        
+        // Display allergens
+        displayAllergens();
+        
+        // Display dietary preferences
+        displayDietaryPreferences();
+        
+    } catch (error) {
+        console.error('Error loading profile data:', error);
+        showToast('Error loading profile data', 'error');
+    }
+}
+
+function displayAllergens() {
+    const allergensList = document.getElementById('allergensList');
+    if (!allergensList) return;
+    
+    if (!state.userProfile.allergens || state.userProfile.allergens.length === 0) {
+        allergensList.innerHTML = '<p class="no-data-text">No allergens selected</p>';
+    } else {
+        let html = '';
+        state.userProfile.allergens.forEach(allergen => {
+            html += `<span class="allergen-badge">${allergen}</span>`;
+        });
+        allergensList.innerHTML = html;
+    }
+}
+
+function displayDietaryPreferences() {
+    const preferencesList = document.getElementById('preferencesList');
+    if (!preferencesList) return;
+    
+    const prefs = state.userProfile.dietary || {};
+    const selectedPrefs = Object.keys(prefs).filter(key => prefs[key]);
+    
+    if (selectedPrefs.length === 0) {
+        preferencesList.innerHTML = '<p class="no-data-text">No dietary preferences selected</p>';
+    } else {
+        let html = '';
+        selectedPrefs.forEach(pref => {
+            const displayName = pref.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            html += `<span class="preference-badge">${displayName}</span>`;
+        });
+        preferencesList.innerHTML = html;
+    }
+}
+
+function populateAllergenInfoGuide() {
+    const container = document.getElementById('allergenInfoContainer');
+    if (!container) return;
+
+    const allergenInfo = [
+        {
+            name: 'Milk',
+            icon: '🥛',
+            description: 'Contains proteins (casein, whey) and lactose. Found in dairy products, cream sauces, some chocolates, and processed foods. Common alternatives: almond, soy, or oat milk.'
+        },
+        {
+            name: 'Egg',
+            icon: '🥚',
+            description: 'Found in eggs and egg-based products. Also hidden in mayonnaise, some baked goods, and processed meats. Protein-rich alternative for cooking: aquafaba.'
+        },
+        {
+            name: 'Fish',
+            icon: '🐟',
+            description: 'Includes all fish species and fish-derived ingredients (anchovies, fish sauce, Worcestershire sauce). Often found in Asian cuisines and seafood dishes.'
+        },
+        {
+            name: 'Shellfish',
+            icon: '🦐',
+            description: 'Includes shrimp, crab, lobster, oysters, mussels, and clams. Cross-contamination risk in seafood restaurants. Common in Asian and Mediterranean cuisines.'
+        },
+        {
+            name: 'Tree Nuts',
+            icon: '🌰',
+            description: 'Includes almonds, walnuts, cashews, pistachios, and pecans. Found in nut butters, baked goods, cereals, and some sauces. High cross-contamination risk.'
+        },
+        {
+            name: 'Peanuts',
+            icon: '🥜',
+            description: 'Technically a legume, not a tree nut. Found in peanut butter, candy, baked goods, and Asian cuisines. Often processed in facilities with tree nuts.'
+        },
+        {
+            name: 'Wheat',
+            icon: '🌾',
+            description: 'A common grain allergen. Found in breads, cereals, pasta, and many processed foods. Contains gluten protein. Alternatives: rice, corn, or gluten-free flour.'
+        },
+        {
+            name: 'Soy',
+            icon: '🫘',
+            description: 'From soybean plant. Found in tofu, soy sauce, edamame, and many processed foods as soy lecithin. Common in Asian cuisine and vegetarian products.'
+        },
+        {
+            name: 'Sesame',
+            icon: '🪨',
+            description: 'Found in tahini, sesame oil, and seeds. Common in Asian, Middle Eastern, and Mediterranean cuisines. Often in hummus, dressings, and baked goods.'
+        },
+        {
+            name: 'Mustard',
+            icon: '🌻',
+            description: 'Includes mustard seeds, mustard powder, and mustard oil. Found in condiments, salad dressings, pickled foods, and spice mixes. Less common allergen.'
+        },
+        {
+            name: 'Gluten',
+            icon: '🌽',
+            description: 'A protein in wheat, barley, and rye. Triggers celiac disease and gluten sensitivity. Hidden in sauces, gravies, processed foods, and some medications.'
+        },
+        {
+            name: 'Sulphites',
+            icon: '🍇',
+            description: 'Preservatives in dried fruits, wines, juices, and some medications. Can cause respiratory issues in sensitive individuals. Look for "sulfite-free" labels.'
+        },
+        {
+            name: 'Corn',
+            icon: '🌽',
+            description: 'Found in corn flour, corn syrup, cornstarch, and many processed foods. Common in baked goods, snacks, and as corn oil or corn derivatives.'
+        },
+        {
+            name: 'Celery',
+            icon: '🥬',
+            description: 'Includes celery, celeriac, and celery seeds. Found in salads, soups, stocks, and spice mixes. Cross-reactivity with birch pollen common in some regions.'
+        },
+        {
+            name: 'Lupin',
+            icon: '🌿',
+            description: 'A legume gaining popularity in gluten-free products. Found in lupin flour, lupini beans, and some European baked goods. Less common but growing allergen.'
+        },
+        {
+            name: 'Molluscs',
+            icon: '🦑',
+            description: 'Includes squid, octopus, snails, and scallops. Found in Mediterranean and Asian cuisines. Often processed with shellfish in the same facilities.'
+        },
+        {
+            name: 'MSG',
+            icon: '🧂',
+            description: 'Monosodium glutamate - a flavor enhancer. Found in processed foods, condiments, Asian seasonings, and some soups. Can trigger sensitivity reactions in some people.'
+        }
+    ];
+
+    let html = '';
+    allergenInfo.forEach(allergen => {
+        const isSelected = state.userProfile.allergens && state.userProfile.allergens.includes(allergen.name);
+        html += `
+            <div style="padding: 15px; border: 2px solid ${isSelected ? '#667eea' : '#e5e7eb'}; border-radius: 8px; background: ${isSelected ? '#f0f4ff' : '#f9fafb'}; cursor: pointer;" onclick="toggleAllergenInfo('${allergen.name}')">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 24px; margin-right: 10px;">${allergen.icon}</span>
+                    <h4 style="margin: 0; color: #1f2937;">${allergen.name}</h4>
+                    ${isSelected ? '<i class="fas fa-check-circle" style="margin-left: auto; color: #667eea; font-size: 18px;"></i>' : ''}
+                </div>
+                <p style="margin: 0; font-size: 13px; color: #666; line-height: 1.4;">${allergen.description}</p>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function toggleAllergenInfo(allergenName) {
+    const index = state.userProfile.allergens.indexOf(allergenName);
+    if (index > -1) {
+        state.userProfile.allergens.splice(index, 1);
+    } else {
+        state.userProfile.allergens.push(allergenName);
+    }
+    populateAllergenInfoGuide();
+}
+
+function toggleEditAllergens() {
+    const viewMode = document.getElementById('allergenViewMode');
+    const editMode = document.getElementById('allergenEditMode');
+    const buttonGroup = document.querySelector('#allergenEditMode .button-group');
+    
+    if (viewMode.classList.contains('hidden')) {
+        // Switch to view mode
+        viewMode.classList.remove('hidden');
+        editMode.classList.add('hidden');
+        displayAllergens();
+    } else {
+        // Switch to edit mode
+        viewMode.classList.add('hidden');
+        editMode.classList.remove('hidden');
+        populateAllergenCheckboxes();
+    }
+}
+
+function toggleEditPreferences() {
+    const viewMode = document.getElementById('preferencesViewMode');
+    const editMode = document.getElementById('preferencesEditMode');
+    
+    if (viewMode.classList.contains('hidden')) {
+        // Switch to view mode
+        viewMode.classList.remove('hidden');
+        editMode.classList.add('hidden');
+        displayDietaryPreferences();
+    } else {
+        // Switch to edit mode
+        viewMode.classList.add('hidden');
+        editMode.classList.remove('hidden');
+        populatePreferenceCheckboxes();
+    }
+}
+
+function populateAllergenCheckboxes() {
+    const container = document.getElementById('allergenCheckboxes');
+    if (!container) return;
+    
+    const allergens = ['Milk', 'Egg', 'Fish', 'Shellfish', 'Tree Nut', 'Peanut', 'Wheat', 
+                       'Soy', 'Sesame', 'Mustard', 'Gluten', 'Sulphite', 'Corn', 'Celery', 
+                       'Lupin', 'Mollusc', 'MSG'];
+    
+    let html = '';
+    allergens.forEach(allergen => {
+        const isChecked = state.userProfile.allergens && 
+                         state.userProfile.allergens.includes(allergen) ? 'checked' : '';
+        const id = `allergen_${allergen.toLowerCase().replace(/\s+/g, '_')}`;
+        html += `
+            <label class="checkbox-group">
+                <input type="checkbox" id="${id}" value="${allergen}" ${isChecked}>
+                <label for="${id}">${allergen}</label>
+            </label>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function populatePreferenceCheckboxes() {
+    const container = document.getElementById('preferencesCheckboxes');
+    if (!container) return;
+    
+    const preferences = [
+        { key: 'vegan', label: 'Vegan' },
+        { key: 'vegetarian', label: 'Vegetarian' },
+        { key: 'keto', label: 'Keto' },
+        { key: 'diabetic_friendly', label: 'Diabetic Friendly' },
+        { key: 'low_sodium', label: 'Low Sodium' },
+        { key: 'heart_safe', label: 'Heart Safe' }
+    ];
+    
+    let html = '';
+    preferences.forEach(pref => {
+        const isChecked = state.userProfile.dietary && 
+                         state.userProfile.dietary[pref.key] ? 'checked' : '';
+        const id = `pref_${pref.key}`;
+        html += `
+            <label class="checkbox-group">
+                <input type="checkbox" id="${id}" value="${pref.key}" ${isChecked}>
+                <label for="${id}">${pref.label}</label>
+            </label>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ============ TEXT EXTRACTION FROM LABEL ============
+async function extractIngredientsFromText() {
+    const labelTextInput = document.getElementById('labelTextInput');
+    const labelText = labelTextInput.value.trim();
+    
+    if (!labelText) {
+        showToast('Please paste food label text', 'warning');
+        return;
+    }
+    
+    const loadingElement = document.getElementById('textExtractionLoading');
+    const errorElement = document.getElementById('textExtractionError');
+    
+    loadingElement.classList.remove('hidden');
+    errorElement.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/extract-ingredients-from-text`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                label_text: labelText
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Set extracted ingredients to state
+            state.extractedText = data.ingredients || [];
+            
+            loadingElement.classList.add('hidden');
+            showToast(`Successfully extracted ${state.extractedText.length} ingredients`, 'success');
+            
+            // Display the extracted ingredients
+            displayExtractedIngredientsList(state.extractedText);
+            
+            // Scroll to results
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+        } else {
+            loadingElement.classList.add('hidden');
+            errorElement.style.display = 'block';
+            errorElement.textContent = `Error: ${data.error || 'Failed to extract ingredients'}`;
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Text extraction error:', error);
+        loadingElement.classList.add('hidden');
+        errorElement.style.display = 'block';
+        errorElement.textContent = `Error: ${error.message}`;
+        showToast('Failed to extract ingredients: ' + error.message, 'error');
+    }
+}
+
+function displayExtractedIngredientsList(ingredients) {
+    const container = document.getElementById('extractedText');
+    if (!container) {
+        console.warn('Extracted text container not found');
+        return;
+    }
+    
+    if (ingredients.length === 0) {
+        container.innerHTML = '<p class="placeholder">No ingredients detected</p>';
+        return;
     }
 
-    // Use new allergen-focused insights
-    const allergenCount = insights.allergen_count || 0;
-    const highRisk = insights.high_risk || 0;
-    const mediumLowRisk = insights.medium_low_risk || 0;
-
-    window.riskChartInstance = new Chart(ctx, {
-        type: 'polarArea',
-        data: {
-            labels: allergenCount === 0 
-                ? ['No Allergens Detected']
-                : ['High Risk Allergens', 'Medium/Low Risk Allergens'],
-            datasets: [{
-                label: 'Allergen Severity Breakdown',
-                data: allergenCount === 0 
-                    ? [1]
-                    : [highRisk, mediumLowRisk],
-                backgroundColor: allergenCount === 0
-                    ? ['#10B98199']
-                    : ['#EF444499', '#F59E0B99'],
-                borderColor: allergenCount === 0
-                    ? ['#10B981']
-                    : ['#EF4444', '#F59E0B'],
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
+    let html = '';
+    ingredients.forEach((ingredient, index) => {
+        html += `
+            <div class="ingredient-item">
+                <span>${ingredient}</span>
+                <button class="remove-btn" onclick="removeIngredient(${index})" title="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
     });
+    container.innerHTML = html;
+}
+
+function clearTextInput() {
+    const labelTextInput = document.getElementById('labelTextInput');
+    const errorElement = document.getElementById('textExtractionError');
+    
+    labelTextInput.value = '';
+    errorElement.style.display = 'none';
+    labelTextInput.focus();
+    
+    // Clear the extracted text display
+    state.extractedText = [];
+    const container = document.getElementById('extractedText');
+    if (container) {
+        container.innerHTML = '<p class="placeholder">Image will appear here after scanning</p>';
+    }
+}
+
+async function saveAllergens() {
+    const checkboxes = document.querySelectorAll('#allergenCheckboxes input[type="checkbox"]:checked');
+    const selectedAllergens = Array.from(checkboxes).map(cb => cb.value);
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/user/${state.userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                allergens: selectedAllergens
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            state.userProfile.allergens = selectedAllergens;
+            showToast('Allergens saved successfully!');
+            toggleEditAllergens();
+        } else {
+            showToast('Error saving allergens: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showToast('Error saving allergens: ' + error.message, 'error');
+        console.error('Error:', error);
+    }
+}
+
+async function savePreferences() {
+    const checkboxes = document.querySelectorAll('#preferencesCheckboxes input[type="checkbox"]:checked');
+    const selectedPrefs = {};
+    
+    // Initialize all preferences to false
+    const allPrefs = ['vegan', 'vegetarian', 'keto', 'diabetic_friendly', 'low_sodium', 'heart_safe'];
+    allPrefs.forEach(pref => selectedPrefs[pref] = false);
+    
+    // Set selected ones to true
+    Array.from(checkboxes).forEach(cb => {
+        selectedPrefs[cb.value] = true;
+    });
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/user/${state.userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                dietary_preferences: selectedPrefs
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            state.userProfile.dietary = selectedPrefs;
+            showToast('Preferences saved successfully!');
+            toggleEditPreferences();
+        } else {
+            showToast('Error saving preferences: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showToast('Error saving preferences: ' + error.message, 'error');
+        console.error('Error:', error);
+    }
+}
+
+function cancelEditAllergens() {
+    toggleEditAllergens();
+}
+
+function cancelEditPreferences() {
+    toggleEditPreferences();
 }
 
 // ============ POLYFILLS ============

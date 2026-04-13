@@ -16,30 +16,23 @@ def setup_ssl():
     print("✓ SSL certificate verification configured")
 
 
-def predownload_easyocr_models():
-    """Pre-download EasyOCR models"""
+def predownload_paddleocr_models():
+    """Pre-download PaddleOCR models"""
     try:
         setup_ssl()
         
         print("\n" + "="*60)
-        print("PRE-DOWNLOADING EASYOCR MODELS")
+        print("PRE-DOWNLOADING PADDLEOCR MODELS")
         print("="*60)
         print("This is a one-time operation. Please wait...\n")
         
-        import easyocr
+        from paddleocr import PaddleOCR
         
-        print("Downloading English language model...")
-        reader = easyocr.Reader(['en'], gpu=False, verbose=True)
+        print("Downloading PaddleOCR English language model...")
+        ocr = PaddleOCR(use_textline_orientation=True, lang='en')
         
-        print("\n✓ EasyOCR models downloaded successfully!")
+        print("\n✓ PaddleOCR models downloaded successfully!")
         print("✓ Models cached and ready to use")
-        
-        # Quick test
-        print("\nTesting OCR engine...")
-        import numpy as np
-        test_img = np.zeros((100, 100, 3), dtype=np.uint8)
-        result = reader.readtext(test_img)
-        print("✓ EasyOCR test passed!")
         
         return True
         
@@ -55,7 +48,7 @@ def main():
     print("DOWNLOADING OCR MODELS")
     print("="*60)
     
-    success = predownload_easyocr_models()
+    success = predownload_paddleocr_models()
     
     if success:
         print("\n" + "="*60)

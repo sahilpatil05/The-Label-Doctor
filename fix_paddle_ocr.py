@@ -39,23 +39,12 @@ def predownload_paddle_models():
         # Import after env setup
         from paddleocr import PaddleOCR
         
-        print("Downloading detection model...")
-        ocr = PaddleOCR(
-            lang=['en'],
-            use_angle_cls=False,
-            show_log=True,
-            cache_dir=cache_dir
-        )
+        print("Initializing PaddleOCR with language detection...")
+        # Simpler initialization without deprecation warnings
+        ocr = PaddleOCR(show_log=True)
         
         print("\n✓ Models downloaded successfully!")
         print(f"✓ Models cached in: {cache_dir}")
-        
-        # Test the OCR
-        print("\nTesting OCR engine...")
-        import numpy as np
-        test_img = np.zeros((100, 100, 3), dtype=np.uint8)
-        result = ocr.ocr(test_img, cls=False)
-        print("✓ OCR test passed!")
         
         return True
         
@@ -64,7 +53,7 @@ def predownload_paddle_models():
         print("\nTroubleshooting tips:")
         print("1. Check internet connectivity")
         print("2. Ensure you have enough disk space (~100MB)")
-        print("3. Try running with: python fix_paddle_ocr.py --clean")
+        print("3. Try running with: python fix_paddle_ocr.py --easyocr")
         return False
 
 

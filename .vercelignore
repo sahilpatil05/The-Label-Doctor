@@ -1,0 +1,81 @@
+# Vercel Build Optimization
+# Files and folders to exclude from Vercel deployment
+
+# Python & Virtual Environments
+venv/
+.venv/
+env/
+.env
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Git & Version Control
+.git/
+.gitignore
+.github/
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.code-workspace
+
+# Testing
+.pytest_cache/
+.tox/
+coverage.html
+.coverage
+
+# Documentation (optional, uncomment if too large)
+# docs/
+# *.md
+
+# Logs & Temporary Files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Large Model Files (if not needed in deployment)
+# Uncomment these if PaddleOCR/EasyOCR models are preventing deployment
+# .paddleocr/
+# .cache/
+# ~/.cache/
+
+# Test Files
+test_*.py
+*_test.py
+tests/
+
+# Database Files (will be recreated on deployment)
+*.db
+*.sqlite
+instance/
+
+# Node modules (if any)
+node_modules/
+
+# Readme files (keep some important ones)
+# Uncomment to exclude
+# README.md
+# QUICK_START.md
+
+# Configuration files (optional)
+# .env.local
+# .env.*.local

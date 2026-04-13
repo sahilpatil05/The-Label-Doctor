@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="48" height="48">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#10B981" opacity="0.1"/>
+  
+  <!-- Main shield shape -->
+  <path d="M 100 30 L 160 60 L 160 110 C 160 145 100 170 100 170 C 100 170 40 145 40 110 L 40 60 Z" fill="#10B981" stroke="#059669" stroke-width="2"/>
+  
+  <!-- Checkmark inside shield -->
+  <g transform="translate(100, 100)">
+    <!-- Checkmark -->
+    <path d="M -15 0 L -5 10 L 20 -15" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Leaf accent -->
+  <g transform="translate(140, 55)">
+    <path d="M 0 0 Q 5 -8 10 -5 Q 8 5 0 10 Q -2 5 0 0" fill="#F59E0B" stroke="#D97706" stroke-width="1"/>
+  </g>
+</svg>
