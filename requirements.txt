@@ -27,5 +27,5 @@ numpy==1.26.4
 # Utilities
 PyYAML==6.0.3
 requests==2.32.5
-bcrypt==4.1.4
+bcrypt==4.3.0
 
