@@ -2739,4 +2739,6 @@ def validate_json():
             return jsonify({'error': 'Content-Type must be application/json'}), 400
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    # Use port 7860 for Hugging Face Spaces, 5000 for local development
+    port = int(os.environ.get('PORT', 7860))
+    app.run(debug=False, host='0.0.0.0', port=port)

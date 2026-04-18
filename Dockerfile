@@ -1,29 +1,23 @@
-# Use Python base image
-FROM python:3.10-slim
+# Use Python 3.12 base image for Hugging Face Spaces
+FROM python:3.12-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy all files
-COPY . /app
+# Copy requirements
+COPY requirements.txt .
 
-# Force Streamlit to use local config folder
-RUN mkdir -p /root/.streamlit && chmod -R 777 /root/.streamlit
-RUN mkdir -p /app/.streamlit && chmod -R 777 /app/.streamlit
-
-# Copy config to both (handles Hugging Face + Streamlit internal behavior)
-COPY .streamlit/config.toml /root/.streamlit/config.toml
-COPY .streamlit/config.toml /app/.streamlit/config.toml
-
-# Install dependencies
+# Install dependencies (no cache to reduce image size)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Disable telemetry (optional)
-ENV STREAMLIT_BROWSER_GATHERUSAGESTATS=false
-ENV STREAMLIT_SERVER_HEADLESS=true
+# Copy all application files
+COPY . /app
 
-# Expose Streamlit port
+# Create instance directory for SQLite database
+RUN mkdir -p /app/instance
+
+# Expose port 7860 (Hugging Face default)
 EXPOSE 7860
 
-# ✅ Run app as root so it has permission to write inside /root/.streamlit
-CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
+# Run Flask app on port 7860
+CMD ["python", "app_api.py"]
