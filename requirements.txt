@@ -17,6 +17,7 @@ spacy==3.8.11
 # Image Processing
 opencv-python-headless==4.13.0.92
 Pillow==12.2.0
+python-bidi==0.4.2
 
 # Database & Data
 SQLAlchemy==2.0.48
