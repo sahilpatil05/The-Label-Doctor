@@ -51,54 +51,17 @@ try:
 except:
     pass
 
-# ========== OCR ENVIRONMENT SETUP ==========
-# CRITICAL: Set up PaddleOCR environment variables BEFORE importing
-# These must be set before any PaddlePaddle code is imported
-
-cache_dir = os.path.expanduser('~/.paddleocr')
-os.environ['PADDLE_CACHE_DIR'] = cache_dir
-os.environ['PADDLEOCR_MODEL_PATH'] = cache_dir
-os.environ['PADDLE_INFERENCE_MODEL_PATH'] = cache_dir
-
-# ===== COMPREHENSIVE MKLDNN/ONEDNN DISABLING =====
-# Multiple layers of disabling - targets MKL-DNN from all angles
-os.environ['FLAGS_use_mkldnn'] = '0'              # Disable MKL-DNN operators
-os.environ['PADDLE_ENABLE_MKLDNN'] = '0'          # Disable MKL-DNN support
-os.environ['PADDLE_DISABLE_FAST_MATH'] = '1'      # Disable fast math (related to MKL)
-os.environ['MKLDNN_VERBOSE'] = '0'                # Suppress MKL-DNN verbose output
-os.environ['MKLDNN_JIT_PROFILING'] = '0'          # Disable JIT profiling
-os.environ['OMP_DYNAMIC'] = 'FALSE'               # Disable OpenMP dynamic threading (used by MKL-DNN)
-os.environ['OMP_NUM_THREADS'] = '1'               # Force single OpenMP thread
-
-# ===== DISABLE ONEDNN GRAPH OPTIMIZATION =====
-os.environ['FLAGS_use_onednn_symbolic_run'] = '0' # Disable oneDNN graph optimization
-os.environ['FLAGS_onednn_cache_capacity'] = '0'   # Disable oneDNN cache
-os.environ['FLAGS_onednn_all_reduce_persist_memory'] = '0'  # Disable oneDNN all_reduce
-os.environ['PADDLE_INFER_DISABLE_GPU_MULTI_STREAM'] = '1'   # Disable GPU multi-stream
-
-# ===== DISABLE PIR (Program IR - newer optimization causing attribute errors) =====
-os.environ['FLAGS_use_new_ir'] = '0'              # Disable new IR optimization
-os.environ['FLAGS_pir_apply_shape_optimization'] = '0'  # Disable shape optimization
-os.environ['FLAGS_pir_apply_cinn_pass'] = '0'     # Disable CINN pass optimization
-
-# ===== CPU AND LOGGING CONFIGURATION =====
-os.environ['CPU_NUM'] = '1'                       # Use single CPU thread (critical for safety)
-os.environ['GLOG_logtostderr'] = '1'              # Redirect logs to stderr
-os.environ['GLOG_minloglevel'] = '2'              # Suppress verbose logging
-os.environ['GLOG_vmodule'] = 'pass_builder=0'    # Disable pass builder logging
-
-# ===== ADDITIONAL SAFETY FLAGS =====
-os.environ['FLAGS_allocator_strategy'] = 'naive_best_fit'  # Use simple memory allocation
-os.environ['PADDLE_RUNTIME_USE_NUMA_AWARE_ALLOCATOR'] = '0'  # Disable NUMA optimization
-os.environ['PADDLE_ENABLE_GPU'] = '0'             # Explicitly disable GPU
-os.environ['CUDA_VISIBLE_DEVICES'] = ''           # Hide all CUDA devices
+# ========== OCR SETUP ==========
+# Using EasyOCR for ingredient scanning
 
 # Try to import OCR libraries
 try:
     import easyocr
     EASYOCR_AVAILABLE = True
+    print("[STARTUP] ✓ EasyOCR loaded successfully")
 except ImportError:
     EASYOCR_AVAILABLE = False
+    print("[STARTUP] ⚠ EasyOCR not available")
 
 # ========== HUGGING FACE INTEGRATION ==========
 # Check if using Hugging Face cloud models (recommended for mobile)
@@ -191,28 +154,8 @@ ocr = None
 ocr_engine = None  # Track which engine is being used
 ocr_lock = __import__('threading').Lock()
 
-class PaddleOCRWrapper:
-    """Wrapper to make PaddleOCR accept cls parameter for API compatibility"""
-    def __init__(self, paddle_ocr):
-        self.paddle_ocr = paddle_ocr
-        self.engine_type = 'paddleocr'
-    
-    def ocr(self, image, cls=False):
-        """Process image with PaddleOCR (ignores cls parameter - not supported by PaddleOCR)"""
-        try:
-            # Use ocr() method directly without cls parameter
-            # PaddleOCR.ocr() doesn't accept cls when use_angle_cls=False
-            results = self.paddle_ocr.ocr(image)
-            return results if results else [[]]
-        except Exception as e:
-            print(f"PaddleOCR processing error: {e}")
-            import traceback
-            traceback.print_exc()
-            return [[]]
-
-
 class EasyOCRWrapper:
-    """Wrapper to make EasyOCR compatible with PaddleOCR API and optimize for multilingual text"""
+    """EasyOCR wrapper for text detection and recognition"""
     def __init__(self, reader):
         self.reader = reader
         self.engine_type = 'easyocr'
@@ -222,7 +165,7 @@ class EasyOCRWrapper:
         }
     
     def ocr(self, image, cls=False):
-        """Process image with EasyOCR and return results in PaddleOCR format
+        """Process image with EasyOCR
         
         Args:
             image: numpy array or file path
@@ -278,10 +221,10 @@ def merge_text_boxes_into_lines(ocr_results, y_threshold=None, image_height=None
     """
     Merge OCR text boxes that belong to the same horizontal line.
     
-    Handles EasyOCR format, PaddleOCR old format, and PaddleOCR new format.
+    Handles EasyOCR format.
     
     Args:
-        ocr_results: Results from EasyOCR or PaddleOCR
+        ocr_results: Results from EasyOCR
         y_threshold: Maximum vertical distance for same line grouping (auto-calculated if None)
         image_height: Image height for adaptive threshold calculation
     
