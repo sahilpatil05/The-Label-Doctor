@@ -10,8 +10,8 @@ gunicorn==25.3.0
 
 # OCR
 easyocr==1.7.2
-torch==2.2.0
-torchvision==0.17.0
+torch==2.11.0
+torchvision==0.16.0
 
 # NLP/Entity Recognition
 spacy==3.8.1
