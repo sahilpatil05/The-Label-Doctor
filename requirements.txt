@@ -14,7 +14,7 @@ torch==2.11.0
 torchvision==0.26.0
 
 # NLP/Entity Recognition
-spacy==3.8.1
+spacy==3.8.11
 
 # Image Processing
 opencv-python-headless==4.13.0.92
