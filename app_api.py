@@ -169,9 +169,20 @@ def add_security_headers(response):
 
 # Database Configuration
 import os
-# Use absolute path for database file
-db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'labeldoctor.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.replace(os.sep, "/")}'
+# Support both local SQLite and cloud databases (PostgreSQL for Render)
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # For Render/Cloud deployment (PostgreSQL)
+    # Fix for SQLAlchemy 1.4+ with psycopg2
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # For local development (SQLite)
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'labeldoctor.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.replace(os.sep, "/")}'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -2561,4 +2572,4 @@ def validate_json():
             return jsonify({'error': 'Content-Type must be application/json'}), 400
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
